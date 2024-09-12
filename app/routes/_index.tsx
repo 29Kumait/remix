@@ -1,48 +1,92 @@
-import type { MetaFunction } from "@remix-run/node";
+import { useLoaderData, Form ,  } from "@remix-run/react";
+import {ActionFunction , json , LoaderFunction , redirect} from "@remix-run/node";
+import { getSession, commitSession } from "~/sessions.server";
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
+export const loader : LoaderFunction = async ({ request } : { request : Request}) => {
+    const session = await getSession(request.headers.get("Cookie"));
+    const selectedValue = session.get("selectedKey") || null;
+    return json({ selectedValue });
+};
+
+interface LoaderData {
+    selectedValue: string;
+}
+
+export const action : ActionFunction = async ({ request }) => {
+    const formData = await request.formData();
+    const selectedValueUser = formData.get("selectedKeyUser");
+
+    const session = await getSession(request.headers.get("Cookie"));
+    session.set("selectedKey", selectedValueUser);
+
+    return redirect("/", {
+        headers: {
+            "Set-Cookie": await commitSession(session),
+        },
+    });
 };
 
 export default function Index() {
-  return (
-    <div className="font-sans p-4">
-      <h1 className="text-3xl">Welcome to Remix</h1>
-      <ul className="list-disc mt-4 pl-6 space-y-2">
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/start/quickstart"
-            rel="noreferrer"
-          >
-            5m Quick Start
-          </a>
-        </li>
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/start/tutorial"
-            rel="noreferrer"
-          >
-            30m Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/docs"
-            rel="noreferrer"
-          >
-            Remix Docs
-          </a>
-        </li>
-      </ul>
-    </div>
-  );
+    const { selectedValue } = useLoaderData<LoaderData>();
+
+    return (
+        <Form method="post">
+            <ul>
+                <li>
+                    <label>
+                        <input
+                            type="radio"
+                            name="selectedKeyUser"
+                            value="value"
+                            defaultChecked={selectedValue === "value"}
+                        />
+                        Option 1
+                    </label>
+                </li>
+
+                <li>
+                    <label>
+                        <input
+                            type="radio"
+                            name="selectedKeyUser"
+                            value="value2"
+                            defaultChecked={selectedValue === "value2"}
+                        />
+                        Option 2
+                    </label>
+                </li>
+            </ul>
+            <button type="submit">Save</button>
+        </Form>
+    );
 }
+
+
+// import type {MetaFunction} from "@remix-run/node";
+// import Answer from "~/routes/answer.$answerId";
+//
+// export const meta: MetaFunction = () => {
+//     return [
+//         {title: "New Remix App"} ,
+//         {name: "description" , content: "Welcome to Remix!"} ,
+//     ];
+// };
+//
+//
+// export default function Index() {
+//     return (
+//         <div className="font-sans p-4">
+//             <h1 className="text-3xl"></h1>
+//             <ul className="list-disc mt-4 pl-6 space-y-2">
+//                 <li>
+//                     <Answer/>
+//                 </li>
+//             </ul>
+//         </div>
+//     );
+// }
+//
+//
+
+
+
