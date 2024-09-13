@@ -1,3 +1,26 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+@layer components {
+    /* Overlay header styling */
+    .fixed-overlay {
+        @apply flex w-full justify-center bg-gray-800 bg-opacity-60 shadow-2xl backdrop-blur-lg dark:border-neutral-800 dark:bg-gray-900/30 lg:w-auto lg:rounded-2xl lg:border lg:p-8 lg:shadow-3xl transition-transform duration-300 ease-in-out;
+    }
+
+    /* Styling for form fields */
+    .form-field {
+        @apply p-4 bg-gray-700 text-white rounded-lg shadow-lg transition-transform duration-300 ease-in-out;
+    }
+
+    /* Common styling for responsive text */
+    .responsive-title {
+        @apply text-3xl lg:text-5xl font-bold text-center text-white;
+    }
+
+    /* Common styling for animated elements */
+    .animate-scale {
+        @apply scale-105 hover:scale-110 lg:scale-110 lg:hover:scale-125 transition-transform duration-300 ease-in-out;
+    }
+}

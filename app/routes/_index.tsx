@@ -1,92 +1,43 @@
-import { useLoaderData, Form ,  } from "@remix-run/react";
-import {ActionFunction , json , LoaderFunction , redirect} from "@remix-run/node";
-import { getSession, commitSession } from "~/sessions.server";
+import { json, LoaderFunction } from "@remix-run/node";
+import { useLoaderData, Link } from "@remix-run/react";
+import { connectToDatabase } from "~/db/mongoDB.server";
+import type { Lesson } from "~/types";
+import ErrorBoundary from "~/routes/ErrorBoundary";
 
-export const loader : LoaderFunction = async ({ request } : { request : Request}) => {
-    const session = await getSession(request.headers.get("Cookie"));
-    const selectedValue = session.get("selectedKey") || null;
-    return json({ selectedValue });
-};
-
-interface LoaderData {
-    selectedValue: string;
-}
-
-export const action : ActionFunction = async ({ request }) => {
-    const formData = await request.formData();
-    const selectedValueUser = formData.get("selectedKeyUser");
-
-    const session = await getSession(request.headers.get("Cookie"));
-    session.set("selectedKey", selectedValueUser);
-
-    return redirect("/", {
-        headers: {
-            "Set-Cookie": await commitSession(session),
-        },
-    });
+export const loader: LoaderFunction = async () => {
+    const { db } = await connectToDatabase();
+    const lessonData = await db.collection("lesson").findOne({});
+    const lessons = lessonData?.lessons || [];
+    return json(lessons);
 };
 
 export default function Index() {
-    const { selectedValue } = useLoaderData<LoaderData>();
+    const lessons = useLoaderData<Lesson[]>();
 
     return (
-        <Form method="post">
-            <ul>
-                <li>
-                    <label>
-                        <input
-                            type="radio"
-                            name="selectedKeyUser"
-                            value="value"
-                            defaultChecked={selectedValue === "value"}
-                        />
-                        Option 1
-                    </label>
-                </li>
-
-                <li>
-                    <label>
-                        <input
-                            type="radio"
-                            name="selectedKeyUser"
-                            value="value2"
-                            defaultChecked={selectedValue === "value2"}
-                        />
-                        Option 2
-                    </label>
-                </li>
-            </ul>
-            <button type="submit">Save</button>
-        </Form>
+        <main className="flex min-h-screen flex-col items-center justify-between p-6 sm:p-12">
+            <div className="w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
+                <ul className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:space-x-6 border-b border-gray-300 bg-gray-800 bg-opacity-60 shadow-2xl backdrop-blur-lg p-6 lg:rounded-2xl lg:border lg:shadow-3xl lg:dark:bg-gray-900/30 transition-transform duration-300 ease-in-out">
+                    {lessons.map((lesson) => (
+                        <li key={lesson.id} className="lg:scale-105 lg:hover:scale-110 transition-transform duration-300 ease-in-out">
+                            <div className="p-4 bg-gray-700 rounded-lg shadow-lg">
+                                <h3 className="text-xl font-semibold text-white">{lesson.title}</h3>
+                                <ul className="mt-2 space-y-2">
+                                    {lesson.exercises.map((exercise) => (
+                                        <li key={exercise.id}>
+                                            <Link to={`/lesson/${lesson.id}/exercise/${exercise.id}`} className="text-blue-400 hover:underline">
+                                                {exercise.title}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </main>
     );
 }
 
-
-// import type {MetaFunction} from "@remix-run/node";
-// import Answer from "~/routes/answer.$answerId";
-//
-// export const meta: MetaFunction = () => {
-//     return [
-//         {title: "New Remix App"} ,
-//         {name: "description" , content: "Welcome to Remix!"} ,
-//     ];
-// };
-//
-//
-// export default function Index() {
-//     return (
-//         <div className="font-sans p-4">
-//             <h1 className="text-3xl"></h1>
-//             <ul className="list-disc mt-4 pl-6 space-y-2">
-//                 <li>
-//                     <Answer/>
-//                 </li>
-//             </ul>
-//         </div>
-//     );
-// }
-//
-//
-
-
-
+export { ErrorBoundary };
