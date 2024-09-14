@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer components {
     /* Overlay header styling */
     .fixed-overlay {
@@ -22,5 +21,29 @@
     /* Common styling for animated elements */
     .animate-scale {
         @apply scale-105 hover:scale-110 lg:scale-110 lg:hover:scale-125 transition-transform duration-300 ease-in-out;
+    }
+
+    /* Fade-in animation */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    .fade-in {
+        @apply opacity-0; /* Initial state with no opacity */
+        animation: fadeIn 0.5s ease-in-out forwards; /* Fade-in animation */
+    }
+
+    .lazy-loaded {
+        @apply opacity-0; /* Set opacity to 0 initially */
+        transition: opacity 0.3s ease-in-out; /* Transition for smooth fade-in */
+    }
+
+    .lazy-loaded.loaded {
+        @apply opacity-100; /* Set opacity to 100 when loaded */
     }
 }
