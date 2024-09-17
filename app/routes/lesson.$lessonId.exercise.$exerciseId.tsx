@@ -4,9 +4,8 @@ import { getSession, commitSession } from "~/sessions.server";
 import { connectToDatabase } from "~/db/mongoDB.server";
 import MultipleChoiceExercise from "../routes/lesson.$lessonId.exercise.$exerciseId.multiple-choice";
 import VideoExercise from "~/routes/lesson.$lessonId.exercise.$exerciseId.video";
-import React from "react";
-import fetch from "node-fetch";
-import {Exercise, Lesson} from "~/types";
+import { Exercise, Lesson } from "~/types";
+import ErrorBoundary from "~/routes/ErrorBoundary";
 
 interface LoaderParams {
   params: { lessonId: string; exerciseId: string };
@@ -16,14 +15,16 @@ interface LoaderParams {
 export const loader = async ({ params, request }: LoaderParams) => {
   const { lessonId, exerciseId } = params;
 
-
-  const session = await getSession(request.headers.get("Cookie"));
-  const selectedOption = session.get(`exercise_${exerciseId}_selectedAnswer`) || null;
-
   const { db } = await connectToDatabase();
+  const session = await getSession(request.headers.get("Cookie"));
+  const selectedOption = session.get(`exercise_${exerciseId}_selectedAnswer`);
+  const accessToken = session.get("vimeoAccessToken") || null;
+
+
   const lesson = await db.collection("lesson").findOne({
     "lessons.id": lessonId,
   });
+
 
   if (!lesson || !lesson.lessons) {
     throw new Response("Lesson not found", { status: 404 });
@@ -37,17 +38,23 @@ export const loader = async ({ params, request }: LoaderParams) => {
   }
 
   if (exercise.resourcetype === "VideoExercise") {
+
     const vimeoMetadata = await fetchVimeoMetadata(exercise.url);
+
     return defer({
       exercise,
       selectedOption,
       vimeoMetadata,
+      accessToken,
+      exerciseId,
+      lessonId
+
     });
   }
 
+
   return json({ exercise, selectedOption });
 };
-
 
 async function fetchVimeoMetadata(videoUrl: string) {
   const videoId = videoUrl.split('/').pop()?.split('?')[0];
@@ -55,25 +62,26 @@ async function fetchVimeoMetadata(videoUrl: string) {
   const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
 
   try {
-    const [response] = await Promise.all ([fetch (vimeoApiUrl , {
+    const response = await fetch(vimeoApiUrl, {
       headers: {
-        Authorization: `Bearer ${ VIMEO_ACCESS_TOKEN }` ,
-      } ,
-    })]);
+        Authorization: `Bearer ${VIMEO_ACCESS_TOKEN}`,
+      },
+    });
 
     if (!response.ok) {
-      return   Error(`Failed to fetch video metadata, status: ${response.status}`);
+      throw new Error(`Failed to fetch video metadata, status: ${response.status}`);
     }
 
-    const videoData: any = await response.json();
+    const data = await response.json();
     return {
-      duration: Math.round(videoData.duration / 15 - 1), //( 27 )
-      views: videoData.stats.plays || 0,
-      likes: videoData.metadata.connections.likes.total,
-      description: videoData.description ||  "unavailable ",
+      duration: data.duration,
+      views: data.stats.plays || 0,
+      likes: data.metadata.connections.likes.total || 0,
+      description: data.description || "Unavailable",
     };
   } catch (error) {
-    throw new Error("Error fetching metadata");
+    console.error("Error fetching metadata:", error);
+    throw new Error("Error fetching Vimeo metadata.");
   }
 }
 
@@ -101,15 +109,19 @@ export const action = async ({ request, params }: ActionParams) => {
   });
 };
 
-
 interface LoaderData {
-    exercise: Exercise;
-    selectedOption: string | null;
-    metadata?: number;
+  exercise: Exercise;
+  selectedOption: string | null;
+  vimeoMetadata?: {
+    duration: number;
+    views: number;
+    likes: number;
+    description: string | null;
+  };
 }
 
 export default function ExercisePage() {
-  const { exercise, metadata } = useLoaderData<LoaderData>();
+  const { exercise, vimeoMetadata } = useLoaderData<LoaderData>();
 
   const ExerciseComponentAsKey = {
     VideoExercise,
@@ -121,8 +133,10 @@ export default function ExercisePage() {
   }
 
   if (exercise.resourcetype === "VideoExercise") {
-    return <ExerciseComponentAsKey exercise={exercise} metadata={metadata} />;
+    return <ExerciseComponentAsKey exercise={exercise} metadata={vimeoMetadata} />;
   }
 
   return <ExerciseComponentAsKey exercise={exercise} />;
 }
+
+export { ErrorBoundary };
