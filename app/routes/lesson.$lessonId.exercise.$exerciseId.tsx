@@ -53,36 +53,35 @@ export const loader = async ({ params, request }: LoaderParams) => {
   }
 
 
-  return json({ exercise, selectedOption });
+  return json({
+    exercise, selectedOption, exerciseId,
+  });
 };
-
 async function fetchVimeoMetadata(videoUrl: string) {
-  const videoId = videoUrl.split('/').pop()?.split('?')[0];
+  const videoId = videoUrl.split("/").pop()?.split("?")[0];
+  if (!videoId) throw new Error("Invalid Vimeo video URL");
+
   const vimeoApiUrl = `https://api.vimeo.com/videos/${videoId}`;
   const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
 
-  try {
-    const response = await fetch(vimeoApiUrl, {
-      headers: {
-        Authorization: `Bearer ${VIMEO_ACCESS_TOKEN}`,
-      },
-    });
+  const response = await fetch(vimeoApiUrl, {
+    headers: {
+      Authorization: `Bearer ${VIMEO_ACCESS_TOKEN}`,
+    },
+  });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video metadata, status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      duration: data.duration,
-      views: data.stats.plays || 0,
-      likes: data.metadata.connections.likes.total || 0,
-      description: data.description || "Unavailable",
-    };
-  } catch (error) {
-    console.error("Error fetching metadata:", error);
-    throw new Error("Error fetching Vimeo metadata.");
+  if (!response.ok) {
+    console.error(`Failed to fetch Vimeo metadata: ${response.status}`);
+    return null;
   }
+
+  const data = await response.json();
+  return {
+    duration: data.duration,
+    views: data.stats.plays || 0,
+    likes: data.metadata.connections.likes.total || 0,
+    description: data.description || "Unavailable",
+  };
 }
 
 interface ActionParams {
