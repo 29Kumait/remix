@@ -15,13 +15,13 @@ interface LoaderData {
 export default function MultipleChoiceExercise() {
   const { exercise, selectedOption: initialSelectedOption } =
     useLoaderData<LoaderData>();
+
   const fetcher = useFetcher();
 
   let selectedOption = initialSelectedOption;
   if (fetcher.formData?.has("radioOption")) {
     selectedOption = fetcher.formData.get("radioOption") as string;
   }
-  const randomColorClass = getRandomColor();
 
   return (
     <BackgroundMultipleChoice>
@@ -63,7 +63,7 @@ export default function MultipleChoiceExercise() {
                   <div className="w-5 h-5 flex-shrink-0">
                     {selectedOption === answer.answer ? (
                       <svg
-                        className={`w-5 h-5 ${randomColorClass}`}
+                        className=" w-5 h-5 text-customPink1"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg"
@@ -99,16 +99,33 @@ export default function MultipleChoiceExercise() {
     </BackgroundMultipleChoice>
   );
 }
-
-const colors = [
-  "text-customBlue",
-  "text-customPink",
-  "text-customGreen",
-  "text-customTeal",
-  "customBlueGreen",
-];
-
-const getRandomColor = () => {
-  const randomIndex = Math.floor(Math.random() * colors.length);
-  return colors[randomIndex];
-};
+//
+// const colors = [
+//   "bg-color1",
+//   "bg-color2",
+//   "bg-color3",
+//   "bg-color4",
+//   "bg-color5",
+//   "bg-color6",
+//   "bg-color7",
+//   "bg-color8",
+//   "bg-color9",
+//   "bg-color10",
+//   "bg-color11",
+//   "bg-color12",
+//   "bg-color13",
+//   "bg-color14",
+//   "bg-color15",
+//   "bg-color16",
+//   "bg-color17",
+//   "bg-color18",
+//   "bg-color19",
+//   "bg-color20",
+// ];
+//
+// const getRandomColor = () => {
+//   const randomIndex = Math.floor(Math.random() * colors.length);
+//   return colors[randomIndex];
+// };
+// {`w-5 h-5 ${randomColorClass}`}
+// const randomColorClass = getRandomColor();

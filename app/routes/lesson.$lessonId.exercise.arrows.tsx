@@ -1,11 +1,9 @@
-import { Exercise, Lesson } from "~/types";
+import { Lesson } from "~/types";
 import { Link, useLoaderData, useMatches } from "@remix-run/react";
 import { ArrowsBackground } from "~/components/Style";
 
 interface LoaderData {
   lesson: Lesson;
-  exercise: Exercise;
-  exerciseId: string;
 }
 
 export default function ExerciseNavigation() {
@@ -49,6 +47,7 @@ export default function ExerciseNavigation() {
         <Link
           to={`/lesson/${lesson.id}/exercise/${previousExercise.id}`}
           prefetch="intent"
+          preventScrollReset={true}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
