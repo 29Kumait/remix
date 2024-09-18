@@ -15,50 +15,55 @@ interface LoaderParams {
 export const loader = async ({ params, request }: LoaderParams) => {
   const { lessonId, exerciseId } = params;
 
+  // Connect to the database
   const { db } = await connectToDatabase();
   const session = await getSession(request.headers.get("Cookie"));
   const selectedOption = session.get(`exercise_${exerciseId}_selectedAnswer`);
   const accessToken = session.get("vimeoAccessToken") || null;
 
-
-  const lesson = await db.collection("lesson").findOne({
-    "lessons.id": lessonId,
-  });
-
+  // Fetch lesson data
+  const lesson = await db
+    .collection("lesson")
+    .findOne({ "lessons.id": lessonId });
 
   if (!lesson || !lesson.lessons) {
     throw new Response("Lesson not found", { status: 404 });
   }
 
-  const lessonData = lesson.lessons.find((lesson: Lesson) => lesson.id === lessonId);
-  const exercise = lessonData.exercises.find((ex: Exercise) => ex.id === exerciseId);
+  const lessonData = lesson.lessons.find(
+    (lesson: Lesson) => lesson.id === lessonId
+  );
+  const exercise = lessonData.exercises.find(
+    (ex: Exercise) => ex.id === exerciseId
+  );
 
   if (!exercise) {
     throw new Response("Exercise not found", { status: 404 });
   }
 
+  // Handle video exercise with deferred loading
   if (exercise.resourcetype === "VideoExercise") {
-
     const vimeoMetadata = await fetchVimeoMetadata(exercise.url);
-
     return defer({
       exercise,
       selectedOption,
       vimeoMetadata,
       accessToken,
       exerciseId,
-      lessonId
-
+      lessonId,
     });
   }
 
-
+  // Return data for non-video exercises
   return json({
-    exercise, selectedOption, exerciseId,
+    exercise,
+    selectedOption,
+    exerciseId,
   });
 };
+
 async function fetchVimeoMetadata(videoUrl: string) {
-  const videoId = videoUrl.split("/").pop()?.split("?")[0];
+  const videoId = videoUrl.split("/").pop()?.split(/[?#]/)[0]; // Enhanced URL parsing
   if (!videoId) throw new Error("Invalid Vimeo video URL");
 
   const vimeoApiUrl = `https://api.vimeo.com/videos/${videoId}`;
@@ -72,7 +77,12 @@ async function fetchVimeoMetadata(videoUrl: string) {
 
   if (!response.ok) {
     console.error(`Failed to fetch Vimeo metadata: ${response.status}`);
-    return null;
+    return {
+      duration: 0,
+      views: 0,
+      likes: 0,
+      description: "Metadata unavailable",
+    };
   }
 
   const data = await response.json();
@@ -120,22 +130,17 @@ interface LoaderData {
 }
 
 export default function ExercisePage() {
-  const { exercise, vimeoMetadata } = useLoaderData<LoaderData>();
+  const { exercise } = useLoaderData<LoaderData>();
 
-  const ExerciseComponentAsKey = {
-    VideoExercise,
-    MultipleChoiceExercise,
-  }[exercise.resourcetype] as React.ElementType;
-
-  if (!ExerciseComponentAsKey) {
-    return null;
+  // Simplified component selection based on exercise type
+  switch (exercise.resourcetype) {
+    case "VideoExercise":
+      return <VideoExercise />;
+    case "MultipleChoiceExercise":
+      return <MultipleChoiceExercise />;
+    default:
+      return <div>Exercise type not supported</div>;
   }
-
-  if (exercise.resourcetype === "VideoExercise") {
-    return <ExerciseComponentAsKey exercise={exercise} metadata={vimeoMetadata} />;
-  }
-
-  return <ExerciseComponentAsKey exercise={exercise} />;
 }
 
 export { ErrorBoundary };
